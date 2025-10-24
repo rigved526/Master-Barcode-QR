@@ -52,33 +52,21 @@ export type Database = {
       tickets: {
         Row: {
           attendee_name: string
-          created_at: string | null
-          email: string
           event_name: string
           id: string
-          purchased_at: string | null
           ticket_code: string
-          ticket_type: string
         }
         Insert: {
           attendee_name: string
-          created_at?: string | null
-          email: string
           event_name: string
           id?: string
-          purchased_at?: string | null
           ticket_code: string
-          ticket_type: string
         }
         Update: {
           attendee_name?: string
-          created_at?: string | null
-          email?: string
           event_name?: string
           id?: string
-          purchased_at?: string | null
           ticket_code?: string
-          ticket_type?: string
         }
         Relationships: []
       }

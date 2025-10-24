@@ -106,7 +106,7 @@ const Scanner = () => {
       return;
     }
 
-    setResult({ status: 'valid', message: `Welcome ${ticket.attendee_name}!` });
+    setResult({ status: 'valid', message: `Verified - ${ticket.event_name}` });
     toast.success(`Checked in: ${ticket.attendee_name}`);
   };
 

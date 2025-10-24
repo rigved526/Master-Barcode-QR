@@ -14,8 +14,6 @@ const Admin = () => {
   const [formData, setFormData] = useState({
     ticketCode: '',
     attendeeName: '',
-    email: '',
-    ticketType: 'General Admission',
     eventName: 'My Event'
   });
 
@@ -23,11 +21,11 @@ const Admin = () => {
     setLoading(true);
     try {
       const sampleTickets = [
-        { ticket_code: 'TICKET001', attendee_name: 'John Doe', email: 'john@example.com', ticket_type: 'VIP', event_name: 'Tech Conference 2025' },
-        { ticket_code: 'TICKET002', attendee_name: 'Jane Smith', email: 'jane@example.com', ticket_type: 'General', event_name: 'Tech Conference 2025' },
-        { ticket_code: 'TICKET003', attendee_name: 'Bob Johnson', email: 'bob@example.com', ticket_type: 'VIP', event_name: 'Tech Conference 2025' },
-        { ticket_code: 'QR12345', attendee_name: 'Alice Williams', email: 'alice@example.com', ticket_type: 'General', event_name: 'Tech Conference 2025' },
-        { ticket_code: 'BAR67890', attendee_name: 'Charlie Brown', email: 'charlie@example.com', ticket_type: 'Early Bird', event_name: 'Tech Conference 2025' },
+        { ticket_code: 'TICKET001', attendee_name: 'John Doe', event_name: 'Tech Conference 2025' },
+        { ticket_code: 'TICKET002', attendee_name: 'Jane Smith', event_name: 'Tech Conference 2025' },
+        { ticket_code: 'TICKET003', attendee_name: 'Bob Johnson', event_name: 'Tech Conference 2025' },
+        { ticket_code: 'QR12345', attendee_name: 'Alice Williams', event_name: 'Tech Conference 2025' },
+        { ticket_code: 'BAR67890', attendee_name: 'Charlie Brown', event_name: 'Tech Conference 2025' },
       ];
 
       const { error } = await supabase.from('tickets').insert(sampleTickets);
@@ -50,8 +48,6 @@ const Admin = () => {
       const { error } = await supabase.from('tickets').insert({
         ticket_code: formData.ticketCode,
         attendee_name: formData.attendeeName,
-        email: formData.email,
-        ticket_type: formData.ticketType,
         event_name: formData.eventName
       });
 
@@ -61,8 +57,6 @@ const Admin = () => {
       setFormData({
         ticketCode: '',
         attendeeName: '',
-        email: '',
-        ticketType: 'General Admission',
         eventName: 'My Event'
       });
     } catch (error: any) {
@@ -123,29 +117,6 @@ const Admin = () => {
                 placeholder="Full name"
                 value={formData.attendeeName}
                 onChange={(e) => setFormData({ ...formData, attendeeName: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="email@example.com"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="ticketType">Ticket Type *</Label>
-              <Input
-                id="ticketType"
-                placeholder="e.g., VIP, General, Early Bird"
-                value={formData.ticketType}
-                onChange={(e) => setFormData({ ...formData, ticketType: e.target.value })}
                 required
               />
             </div>
