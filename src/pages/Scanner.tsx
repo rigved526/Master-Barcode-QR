@@ -73,25 +73,12 @@ const Scanner = () => {
     if (!ticket) {
       setResult({ status: 'invalid', message: 'Invalid ticket code' });
       toast.error("Invalid ticket");
-      
-      // Log invalid attempt
-      await supabase.from('check_ins').insert({
-        ticket_code: decodedText,
-        status: 'invalid',
-        attendee_name: 'Unknown'
-      });
       return;
     }
 
     // Check if already checked in
-    const { data: existingCheckIn } = await supabase
-      .from('check_ins')
-      .select('*')
-      .eq('ticket_id', ticket.id)
-      .maybeSingle();
-
-    if (existingCheckIn) {
-      const timestamp = new Date(existingCheckIn.checked_in_at).toLocaleString();
+    if (ticket.checked_in_at) {
+      const timestamp = new Date(ticket.checked_in_at).toLocaleString();
       setResult({ 
         status: 'duplicate', 
         message: `${ticket.attendee_name} already checked in at ${timestamp}`,
@@ -105,15 +92,11 @@ const Scanner = () => {
       return;
     }
 
-    // Valid check-in
+    // Valid check-in - update ticket with timestamp
     const { error: checkInError } = await supabase
-      .from('check_ins')
-      .insert({
-        ticket_id: ticket.id,
-        ticket_code: decodedText,
-        status: 'valid',
-        attendee_name: ticket.attendee_name
-      });
+      .from('tickets')
+      .update({ checked_in_at: new Date().toISOString() })
+      .eq('id', ticket.id);
 
     if (checkInError) {
       setResult({ status: 'invalid', message: 'Error recording check-in' });

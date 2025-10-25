@@ -14,56 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
-      check_ins: {
-        Row: {
-          attendee_name: string | null
-          checked_in_at: string | null
-          id: string
-          status: string
-          ticket_code: string
-          ticket_id: string | null
-        }
-        Insert: {
-          attendee_name?: string | null
-          checked_in_at?: string | null
-          id?: string
-          status: string
-          ticket_code: string
-          ticket_id?: string | null
-        }
-        Update: {
-          attendee_name?: string | null
-          checked_in_at?: string | null
-          id?: string
-          status?: string
-          ticket_code?: string
-          ticket_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "check_ins_ticket_id_fkey"
-            columns: ["ticket_id"]
-            isOneToOne: true
-            referencedRelation: "tickets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       tickets: {
         Row: {
           attendee_name: string
+          checked_in_at: string | null
           event_name: string
           id: string
           ticket_code: string
         }
         Insert: {
           attendee_name: string
+          checked_in_at?: string | null
           event_name: string
           id?: string
           ticket_code: string
         }
         Update: {
           attendee_name?: string
+          checked_in_at?: string | null
           event_name?: string
           id?: string
           ticket_code?: string
