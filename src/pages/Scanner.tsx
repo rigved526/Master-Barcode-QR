@@ -37,13 +37,18 @@ const Scanner = () => {
   };
 
   const stopScanner = async () => {
-    if (scannerRef.current) {
+    if (scannerRef.current && scanning) {
       try {
-        await scannerRef.current.stop();
-        scannerRef.current.clear();
+        const state = await scannerRef.current.getState();
+        // Only stop if scanner is actually running (state 2) or paused (state 3)
+        if (state === 2 || state === 3) {
+          await scannerRef.current.stop();
+          scannerRef.current.clear();
+        }
       } catch (err) {
         console.error("Error stopping scanner:", err);
       }
+      scannerRef.current = null;
     }
     setScanning(false);
   };
