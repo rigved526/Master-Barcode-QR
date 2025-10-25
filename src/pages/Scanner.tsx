@@ -9,7 +9,8 @@ import { toast } from "sonner";
 
 const Scanner = () => {
   const [scanning, setScanning] = useState(false);
-  const [result, setResult] = useState<{ status: 'valid' | 'invalid' | 'duplicate', message: string } | null>(null);
+  const [result, setResult] = useState<{ status: 'valid' | 'invalid' | 'duplicate', message: string, timestamp?: string } | null>(null);
+  const [flashCount, setFlashCount] = useState(0);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const navigate = useNavigate();
 
@@ -90,8 +91,17 @@ const Scanner = () => {
       .maybeSingle();
 
     if (existingCheckIn) {
-      setResult({ status: 'duplicate', message: `Already checked in: ${ticket.attendee_name}` });
+      const timestamp = new Date(existingCheckIn.checked_in_at).toLocaleString();
+      setResult({ 
+        status: 'duplicate', 
+        message: `${ticket.attendee_name} already checked in at ${timestamp}`,
+        timestamp 
+      });
       toast.error("Ticket already used");
+      
+      // Trigger flash animation
+      setFlashCount(4); // Flash 2 times (4 half-cycles)
+      
       return;
     }
 
@@ -123,8 +133,22 @@ const Scanner = () => {
     };
   }, []);
 
+  // Flash animation effect
+  useEffect(() => {
+    if (flashCount > 0) {
+      const timer = setTimeout(() => {
+        setFlashCount(flashCount - 1);
+      }, 250); // Flash every 250ms
+      return () => clearTimeout(timer);
+    }
+  }, [flashCount]);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4">
+    <div className={`min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4 transition-colors duration-250 ${
+      flashCount > 0 && result?.status === 'duplicate' 
+        ? (flashCount % 2 === 0 ? 'bg-error/30' : 'bg-success/30')
+        : ''
+    }`}>
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

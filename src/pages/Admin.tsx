@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 const Admin = () => {
@@ -17,24 +17,34 @@ const Admin = () => {
     eventName: 'My Event'
   });
 
-  const generateSampleTickets = async () => {
+  const handleCSVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
     setLoading(true);
     try {
-      const sampleTickets = [
-        { ticket_code: 'TICKET001', attendee_name: 'John Doe', event_name: 'Tech Conference 2025' },
-        { ticket_code: 'TICKET002', attendee_name: 'Jane Smith', event_name: 'Tech Conference 2025' },
-        { ticket_code: 'TICKET003', attendee_name: 'Bob Johnson', event_name: 'Tech Conference 2025' },
-        { ticket_code: 'QR12345', attendee_name: 'Alice Williams', event_name: 'Tech Conference 2025' },
-        { ticket_code: 'BAR67890', attendee_name: 'Charlie Brown', event_name: 'Tech Conference 2025' },
-      ];
+      const text = await file.text();
+      const rows = text.split('\n').filter(row => row.trim());
+      
+      // Skip header row and parse CSV
+      const tickets = rows.slice(1).map(row => {
+        const [ticket_code, attendee_name, event_name] = row.split(',').map(cell => cell.trim());
+        return { ticket_code, attendee_name, event_name };
+      }).filter(ticket => ticket.ticket_code && ticket.attendee_name && ticket.event_name);
 
-      const { error } = await supabase.from('tickets').insert(sampleTickets);
+      if (tickets.length === 0) {
+        toast.error('No valid tickets found in CSV');
+        return;
+      }
+
+      const { error } = await supabase.from('tickets').insert(tickets);
       
       if (error) throw error;
       
-      toast.success('Sample tickets created successfully!');
+      toast.success(`${tickets.length} tickets uploaded successfully!`);
+      e.target.value = '';
     } catch (error: any) {
-      toast.error(error.message || 'Failed to create sample tickets');
+      toast.error(error.message || 'Failed to upload CSV');
     } finally {
       setLoading(false);
     }
@@ -82,18 +92,22 @@ const Admin = () => {
 
         <Card className="p-6 space-y-4">
           <div className="space-y-2">
-            <h2 className="text-xl font-bold text-foreground">Quick Setup</h2>
+            <h2 className="text-xl font-bold text-foreground">Bulk Upload</h2>
             <p className="text-sm text-muted-foreground">
-              Generate sample tickets to test the scanning system
+              Upload multiple tickets via CSV file (Format: ticket_code, attendee_name, event_name)
             </p>
           </div>
-          <Button
-            onClick={generateSampleTickets}
-            disabled={loading}
-            className="w-full bg-primary hover:bg-primary/90"
-          >
-            Generate 5 Sample Tickets
-          </Button>
+          <div className="space-y-2">
+            <Label htmlFor="csvFile">CSV File</Label>
+            <Input
+              id="csvFile"
+              type="file"
+              accept=".csv"
+              onChange={handleCSVUpload}
+              disabled={loading}
+              className="cursor-pointer"
+            />
+          </div>
         </Card>
 
         <Card className="p-6">
