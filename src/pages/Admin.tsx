@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/firebase/client";
+import { collection, addDoc, writeBatch } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,9 +38,8 @@ const Admin = () => {
         return;
       }
 
-      const { error } = await supabase.from('tickets').insert(tickets);
-      
-      if (error) throw error;
+      const attendeesRef = collection(db, "events", "my-first-event", "attendees");
+      await Promise.all(tickets.map(ticket => addDoc(attendeesRef, ticket)));
       
       toast.success(`${tickets.length} tickets uploaded successfully!`);
       e.target.value = '';
@@ -55,13 +55,13 @@ const Admin = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.from('tickets').insert({
+      const attendeesRef = collection(db, "events", "my-first-event", "attendees");
+      await addDoc(attendeesRef, {
         ticket_code: formData.ticketCode,
         attendee_name: formData.attendeeName,
-        event_name: formData.eventName
+        event_name: formData.eventName,
+        checked_in_at: null,
       });
-
-      if (error) throw error;
 
       toast.success('Ticket created successfully!');
       setFormData({
