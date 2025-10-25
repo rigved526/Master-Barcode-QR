@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/firebase/client";
+import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CheckCircle, XCircle, Scan, User, AlertCircle, Home, LayoutDashboard } from "lucide-react";
@@ -60,27 +61,21 @@ const Scanner = () => {
     setProcessing(true);
 
     await stopScanner();
-    
-    // Check if ticket exists
-    const { data: ticket, error: ticketError } = await supabase
-      .from('tickets')
-      .select('*')
-      .eq('ticket_code', decodedText)
-      .maybeSingle();
 
-    if (ticketError) {
-      setResult({ status: 'invalid', message: 'Error checking ticket' });
-      toast.error("Error checking ticket");
-      setProcessing(false);
-      return;
-    }
+    try {
+      const ticketsRef = collection(db, "tickets");
+      const q = query(ticketsRef, where("ticket_code", "==", decodedText));
+      const querySnapshot = await getDocs(q);
 
-    if (!ticket) {
-      setResult({ status: 'invalid', message: 'Invalid ticket code' });
-      toast.error("Invalid ticket");
-      setProcessing(false);
-      return;
-    }
+      if (querySnapshot.empty) {
+        setResult({ status: 'invalid', message: 'Invalid ticket code' });
+        toast.error("Invalid ticket");
+        setProcessing(false);
+        return;
+      }
+
+      const ticketDoc = querySnapshot.docs[0];
+      const ticket = ticketDoc.data();
 
     // Check if already checked in
     if (ticket.checked_in_at) {
@@ -99,22 +94,21 @@ const Scanner = () => {
     }
 
     // Valid check-in - update ticket with timestamp
-    const { error: checkInError } = await supabase
-      .from('tickets')
-      .update({ checked_in_at: new Date().toISOString() })
-      .eq('id', ticket.id);
-
-    if (checkInError) {
-      setResult({ status: 'invalid', message: 'Error recording check-in' });
-      toast.error("Error recording check-in");
-      setProcessing(false);
-      return;
-    }
+    const ticketRef = doc(db, "tickets", ticketDoc.id);
+    await updateDoc(ticketRef, {
+      checked_in_at: serverTimestamp()
+    });
 
     setResult({ status: 'valid', message: `Verified - ${ticket.event_name}` });
     toast.success(`Checked in: ${ticket.attendee_name}`);
+  } catch (error) {
+    console.error("Error processing ticket:", error);
+    setResult({ status: 'invalid', message: 'An error occurred' });
+    toast.error("An error occurred while processing the ticket");
+  } finally {
     setProcessing(false);
-  };
+  }
+};
 
   useEffect(() => {
     return () => {
