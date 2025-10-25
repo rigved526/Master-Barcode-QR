@@ -63,8 +63,8 @@ const Scanner = () => {
     await stopScanner();
 
     try {
-      const ticketsRef = collection(db, "tickets");
-      const q = query(ticketsRef, where("ticket_code", "==", decodedText));
+      const attendeesRef = collection(db, "events", "my-first-event", "attendees");
+      const q = query(attendeesRef, where("ticket_code", "==", decodedText));
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
@@ -94,8 +94,8 @@ const Scanner = () => {
     }
 
     // Valid check-in - update ticket with timestamp
-    const ticketRef = doc(db, "tickets", ticketDoc.id);
-    await updateDoc(ticketRef, {
+    const attendeeRef = doc(db, "events", "my-first-event", "attendees", ticketDoc.id);
+    await updateDoc(attendeeRef, {
       checked_in_at: serverTimestamp()
     });
 

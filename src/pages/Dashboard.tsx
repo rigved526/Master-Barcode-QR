@@ -1,71 +1,61 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/firebase/client";
+import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Scan, Users, CheckCircle, Clock } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 
-type Ticket = {
+type Attendee = {
   id: string;
-  ticket_code: string;
   attendee_name: string;
-  event_name: string;
-  checked_in_at: string | null;
+  ticket_code: string;
+  checked_in_at: {
+    seconds: number;
+    nanoseconds: number;
+  } | null;
 };
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [stats, setStats] = useState({ total: 0, checkedIn: 0, notCheckedIn: 0 });
 
-  const fetchTickets = async () => {
-    const { data } = await supabase
-      .from('tickets')
-      .select('*')
-      .order('checked_in_at', { ascending: false, nullsFirst: false });
-
-    if (data) {
-      setTickets(data as Ticket[]);
-      
-      const checkedInCount = data.filter(t => t.checked_in_at !== null).length;
-      
-      setStats({
-        total: data.length,
-        checkedIn: checkedInCount,
-        notCheckedIn: data.length - checkedInCount
-      });
-    }
-  };
-
   useEffect(() => {
-    fetchTickets();
+    const attendeesRef = collection(db, "events", "my-first-event", "attendees");
+    const q = query(attendeesRef, orderBy("attendee_name"));
 
-    // Subscribe to real-time updates
-    const channel = supabase
-      .channel('tickets-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'tickets'
-        },
-        () => {
-          fetchTickets();
-        }
-      )
-      .subscribe();
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const attendeesData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Attendee));
+      
+      setAttendees(attendeesData);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      const checkedInCount = attendeesData.filter(a => a.checked_in_at).length;
+      setStats({
+        total: attendeesData.length,
+        checkedIn: checkedInCount,
+        notCheckedIn: attendeesData.length - checkedInCount,
+      });
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const checkedInTickets = tickets.filter(t => t.checked_in_at !== null);
+  const sortedAttendees = [...attendees].sort((a, b) => {
+    if (a.checked_in_at && b.checked_in_at) {
+      return b.checked_in_at.seconds - a.checked_in_at.seconds;
+    }
+    if (a.checked_in_at) return -1;
+    if (b.checked_in_at) return 1;
+    return a.attendee_name.localeCompare(b.attendee_name);
+  });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4 pt-20">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -109,45 +99,48 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Recent Check-ins */}
+        {/* Attendee List */}
         <Card className="p-6">
-          <h2 className="text-xl font-bold mb-4 text-foreground">Recent Check-ins</h2>
+          <h2 className="text-xl font-bold mb-4 text-foreground">Attendee List</h2>
           <div className="space-y-3">
-            {checkedInTickets.length === 0 && (
+            {sortedAttendees.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
-                No check-ins yet. Start scanning tickets!
+                No attendees found for this event.
               </p>
-            )}
-            
-            {checkedInTickets.map((ticket) => (
-              <div
-                key={ticket.id}
-                className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-              >
-                <div className="flex items-center gap-4 flex-1">
-                  <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
-                  
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground truncate">
-                      {ticket.attendee_name}
-                    </p>
-                    <p className="text-sm text-muted-foreground font-mono truncate">
-                      {ticket.ticket_code}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {ticket.event_name}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Clock className="w-4 h-4" />
-                    <span className="whitespace-nowrap">
-                      {formatDistanceToNow(new Date(ticket.checked_in_at!), { addSuffix: true })}
-                    </span>
-                  </div>
+            ) : (
+              <div className="border rounded-lg overflow-hidden">
+                <div className="grid grid-cols-2 bg-muted/50 font-medium px-4 py-2">
+                  <p>Attendee Name</p>
+                  <p>Check-in Status</p>
                 </div>
+                {sortedAttendees.map((attendee) => (
+                  <div
+                    key={attendee.id}
+                    className="grid grid-cols-2 items-center p-4 border-t"
+                  >
+                    <div>
+                      <p className="font-medium text-foreground">{attendee.attendee_name}</p>
+                      <p className="text-sm text-muted-foreground font-mono">{attendee.ticket_code}</p>
+                    </div>
+                    <div>
+                      {attendee.checked_in_at ? (
+                        <div className="flex items-center gap-2 text-success">
+                          <CheckCircle className="w-5 h-5" />
+                          <span>
+                            {format(new Date(attendee.checked_in_at.seconds * 1000), "Pp")}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Clock className="w-5 h-5" />
+                          <span>Not Checked In</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         </Card>
       </div>
